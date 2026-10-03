@@ -60,6 +60,10 @@ const confirmModal = document.getElementById("confirmModal");
 const confirmMessage = document.getElementById("confirmMessage");
 const acceptConfirm = document.getElementById("acceptConfirm");
 const cancelConfirm = document.getElementById("cancelConfirm");
+const analysisModal = document.getElementById("analysisModal");
+const analysisTitle = document.getElementById("analysisTitle");
+const analysisSummary = document.getElementById("analysisSummary");
+const analysisColumns = document.getElementById("analysisColumns");
 
 const API_URL = window.BDIA_API_URL || "http://localhost:8000";
 let accessToken = localStorage.getItem("datalens_token");
@@ -189,8 +193,11 @@ async function selectProject(projectId) {
     currentProject = projects.find(project => project.id === projectId);
     if (!currentProject) return;
     clearSources();
+    chatMessages.innerHTML = "";
+    questionCount.textContent = "0";
     updateProjectInterface(currentProject);
     await loadSources();
+    await loadHistory();
 }
 
 async function deleteProject(projectId) {
@@ -204,12 +211,21 @@ async function deleteProject(projectId) {
         await apiRequest(`/projects/${projectId}`, { method: "DELETE" });
         projects = projects.filter(item => item.id !== projectId);
         if (currentProject?.id === projectId) {
-            currentProject = projects[0] || null;
-            clearSources();
-            if (currentProject) await loadSources();
+            if (projects.length > 0) {
+                await selectProject(projects[0].id);
+            } else {
+                currentProject = null;
+                currentSources = [];
+                latestSource = null;
+                clearSources();
+                chatMessages.innerHTML = "";
+                questionCount.textContent = "0";
+                document.querySelector(".workspace-header h1").textContent = "Nenhum projeto selecionado";
+                document.querySelector(".breadcrumb strong").textContent = "Projetos";
+                document.getElementById("projectList").innerHTML = "";
+            }
         }
         if (currentProject) updateProjectInterface(currentProject);
-        else document.getElementById("projectList").innerHTML = "";
     } catch (error) {
         alert(error.message);
     }
@@ -412,6 +428,12 @@ sourceMode.addEventListener("change", function() {
     const isDatabase = sourceMode.value !== "file";
     dropZone.classList.toggle("hidden", isDatabase);
     databaseFields.classList.toggle("hidden", !isDatabase);
+    connectionUrl.placeholder = sourceMode.value === "mongodb"
+        ? "mongodb://usuario:senha@host:27017/banco"
+        : "mysql+pymysql://usuario:senha@host:3306/banco";
+    databaseQuery.placeholder = sourceMode.value === "mongodb"
+        ? "colecao ou colecao?{}"
+        : "users ou SELECT * FROM users";
     selectedFiles.innerHTML = "";
     fileInput.value = "";
 });
@@ -669,16 +691,25 @@ function addSourceToInterface(file, sourceData = null) {
         </div>
 
 
-        <button class="source-menu">
-
-            <i class="fa-solid fa-ellipsis"></i>
-
-        </button>
+        <div class="source-actions">
+            ${sourceData?.type === "mysql" ? `
+                <button class="source-analyze" type="button" title="Analisar fonte MySQL" aria-label="Analisar fonte MySQL">
+                    <i class="fa-solid fa-chart-simple"></i>
+                </button>
+            ` : ""}
+            <button class="source-menu" type="button" title="Excluir fonte" aria-label="Excluir fonte">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>
 
     `;
 
     sourceCard.querySelector(".source-menu").addEventListener("click", () => {
         deleteSource(sourceData?.id, sourceCard);
+    });
+
+    sourceCard.querySelector(".source-analyze")?.addEventListener("click", event => {
+        analyzeSource(sourceData.id, event.currentTarget);
     });
 
 
@@ -699,6 +730,63 @@ function addSourceToInterface(file, sourceData = null) {
     updateSourceCount();
 
 }
+
+async function analyzeSource(sourceId, button) {
+    const originalIcon = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+    try {
+        const result = await apiRequest(`/sources/${sourceId}/analyze`, {
+            method: "POST"
+        });
+        const analysis = result.analysis || {};
+        const formatNumber = value => Number(value || 0).toLocaleString("pt-BR");
+        const formatValue = value => Number.isFinite(value)
+            ? value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })
+            : escapeHTML(String(value ?? "-"));
+
+        analysisTitle.textContent = `Análise: ${result.source_name}`;
+        analysisSummary.textContent = `${formatNumber(analysis.total_registros)} registros · ${formatNumber(analysis.total_colunas)} colunas · dados capturados ao adicionar a fonte`;
+
+        const columnDetails = analysis.analise_colunas || {};
+        const rows = Object.entries(columnDetails);
+        analysisColumns.innerHTML = rows.length
+            ? rows.map(([name, details]) => {
+                const stats = details.estatisticas
+                    ? `Mín. ${formatValue(details.estatisticas.minimo)} · Máx. ${formatValue(details.estatisticas.maximo)} · Média ${formatValue(details.estatisticas.media)}`
+                    : "-";
+
+                return `
+                    <tr>
+                        <th scope="row">${escapeHTML(name)}</th>
+                        <td>${escapeHTML(details.tipo || "-")}</td>
+                        <td>${formatNumber(details.valores_preenchidos)}</td>
+                        <td>${formatNumber(details.valores_nulos)}</td>
+                        <td>${formatNumber(details.valores_unicos)}</td>
+                        <td>${stats}</td>
+                    </tr>
+                `;
+            }).join("")
+            : '<tr><td colspan="6">Nenhuma coluna encontrada nos dados.</td></tr>';
+
+        analysisProgress.textContent = "100%";
+        analysisModal.classList.remove("hidden");
+    } catch (error) {
+        alert(error.message);
+    } finally {
+        button.disabled = false;
+        button.innerHTML = originalIcon;
+    }
+}
+
+document.getElementById("closeAnalysisModal").addEventListener("click", () => {
+    analysisModal.classList.add("hidden");
+});
+
+analysisModal.addEventListener("click", event => {
+    if (event.target === analysisModal) analysisModal.classList.add("hidden");
+});
 
 async function deleteSource(sourceId, sourceCard) {
     if (!sourceId || !(await askConfirmation(

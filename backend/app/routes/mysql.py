@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.services.mysql_data import (
     listar_tabelas_mysql,
@@ -7,8 +7,13 @@ from app.services.mysql_data import (
 )
 
 from app.services.ai import criar_prompt_mysql, consultar_ia
+from app.routes.auth import get_current_user
 
-router = APIRouter(prefix="/mysql", tags=["MySQL"])
+router = APIRouter(
+    prefix="/mysql",
+    tags=["MySQL"],
+    dependencies=[Depends(get_current_user)]
+)
 
 
 @router.get("/tables")
