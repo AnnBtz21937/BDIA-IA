@@ -224,8 +224,8 @@ BDIA
 
 O projeto é dividido em duas partes principais:
 
-front-end/: interface web desenvolvida com HTML, CSS e JavaScript.
-backend/: API desenvolvida com FastAPI, responsável pelo processamento das fontes, autenticação, gerenciamento de projetos e acesso aos dados.
+- **Front-end:** interface web desenvolvida com HTML, CSS e JavaScript.
+- **Back-end:** API desenvolvida com FastAPI, responsável pelo processamento das fontes, autenticação, gerenciamento de projetos e acesso aos dados.
 
 O frontend se comunica com o backend por meio de requisições HTTP e não acessa diretamente os bancos de dados.
 
