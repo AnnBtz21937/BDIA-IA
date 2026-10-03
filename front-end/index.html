@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BDIA — Sistema Inteligente</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261002-3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body>
@@ -655,11 +655,11 @@
                 </div>
                 <div class="input-group">
                     <label for="connectionUrl">URL de conexão</label>
-                    <input id="connectionUrl" type="text" placeholder="mysql+pymysql://... ou mongodb://...">
+                    <input id="connectionUrl" type="text" placeholder="mysql+pymysql://usuario:senha@localhost:3306/banco">
                 </div>
                 <div class="input-group">
-                    <label for="databaseQuery">Consulta</label>
-                    <input id="databaseQuery" type="text" placeholder="SQL: SELECT ... | Mongo: colecao?{ }">
+                    <label for="databaseQuery">Tabela ou consulta</label>
+                    <input id="databaseQuery" type="text" placeholder="users ou SELECT * FROM users">
                 </div>
             </div>
 
@@ -714,6 +714,32 @@
             <div class="modal-actions">
                 <button class="cancel-btn" id="cancelConfirm">Cancelar</button>
                 <button class="primary-btn danger-btn" id="acceptConfirm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="analysisModal">
+        <div class="modal analysis-modal">
+            <button class="modal-close" id="closeAnalysisModal" title="Fechar análise">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="modal-icon"><i class="fa-solid fa-chart-simple"></i></div>
+            <h2 id="analysisTitle">Análise da fonte</h2>
+            <p id="analysisSummary"></p>
+            <div class="analysis-table-wrap">
+                <table class="analysis-table">
+                    <thead>
+                        <tr>
+                            <th>Coluna</th>
+                            <th>Tipo</th>
+                            <th>Preenchidos</th>
+                            <th>Nulos</th>
+                            <th>Únicos</th>
+                            <th>Estatísticas</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analysisColumns"></tbody>
+                </table>
             </div>
         </div>
     </div>

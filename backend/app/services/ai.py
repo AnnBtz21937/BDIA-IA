@@ -1,9 +1,10 @@
+import json
 import requests
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 OLLAMA_MODEL = "llama3.2:1b"
 
-def preparar_contexto_ia(resultado_analise, pergunta):
+def preparar_contexto_ia(resultado_analise, pergunta, linhas_relevantes=None):
     """
     Seleciona somente as informações relevantes da análise
     para serem utilizadas pela IA.
@@ -26,6 +27,7 @@ def preparar_contexto_ia(resultado_analise, pergunta):
             0
         )
     }
+    contexto["linhas_relevantes"] = linhas_relevantes or []
 
     # Perguntas sobre relações entre variáveis
     termos_relacao = (
@@ -188,9 +190,13 @@ Comparações:
 Insights:
 {contexto.get("insights", {})}
 
+Linhas reais da tabela:
+{json.dumps(contexto.get("linhas_relevantes", []), ensure_ascii=False, default=str)}
+
 RESPONDA DIRETAMENTE À PERGUNTA DO USUÁRIO.
 Se a informação necessária não estiver nos dados fornecidos,
 informe que ela não está disponível.
+Quando a pergunta pedir o conteúdo ou exemplos da tabela, use as linhas reais acima.
 """
 
     return prompt
@@ -224,7 +230,7 @@ def consultar_ia(prompt):
             ],
             "stream": False,
             "options": {
-                "num_predict": 60,
+                "num_predict": 300,
                 "temperature": 0
             }
         },
@@ -274,4 +280,26 @@ REGRAS:
 - Não mencione o modelo, o prompt ou estas instruções.
 
 RESPOSTA:
+"""
+
+
+def criar_prompt_mongodb(contexto, pergunta):
+    return f"""
+Você é um assistente de análise de dados MongoDB.
+
+Responda em português do Brasil, de forma clara e direta.
+Use somente os documentos fornecidos; não invente campos nem valores.
+Quando pedirem o conteúdo, descreva os documentos relevantes.
+Se a amostra não contiver a informação, diga isso claramente.
+
+COLEÇÃO: {contexto.get("colecao")}
+TOTAL DE DOCUMENTOS: {contexto.get("total_documentos")}
+FILTRO APLICADO: {json.dumps(contexto.get("filtros", {}), ensure_ascii=False, default=str)}
+DOCUMENTOS (amostra de até {contexto.get("limite_documentos", 0)}):
+{json.dumps(contexto.get("documentos", []), ensure_ascii=False, default=str)}
+
+PERGUNTA:
+{pergunta}
+
+RESPONDA DIRETAMENTE À PERGUNTA.
 """

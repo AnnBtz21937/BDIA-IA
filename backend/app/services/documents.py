@@ -188,6 +188,37 @@ def _table_answer(question: str, analysis: dict) -> str:
     ])
 
 
+def _relevant_table_rows(file_path: str, question: str, limit: int = 12) -> list[dict]:
+    frame = ler_csv(file_path)
+    records = frame.to_dict(orient="records")
+    ignored_terms = {
+        "qual", "quais", "como", "onde", "quando", "sobre", "resuma",
+        "resumo", "assunto", "tema", "principal", "isso", "esse", "esta",
+        "para", "arquivo", "documento", "conteudo", "dados", "tabela",
+        "registro", "registros", "linha", "linhas", "mostre", "mostrar",
+        "exiba", "mostrar", "mostre", "listar", "lista", "favor"
+    }
+    keywords = {
+        word for word in _normalize(question).split()
+        if len(word) >= 3 and word not in ignored_terms
+    }
+
+    if keywords:
+        matching_records = [
+            row for row in records
+            if any(
+                keyword in _normalize(str(value))
+                for value in row.values()
+                if value is not None
+                for keyword in keywords
+            )
+        ]
+        if matching_records:
+            records = matching_records
+
+    return records[:limit]
+
+
 def _text_answer(question: str, text: str) -> str:
     normalized_question = _normalize(question)
     keywords = {
@@ -388,9 +419,11 @@ def answer_question(file_path: str, source_name: str, question: str) -> dict:
 
         if document["kind"] == "table":
 
+            linhas_relevantes = _relevant_table_rows(file_path, question)
             contexto = preparar_contexto_ia(
                 document["analysis"],
-                question
+                question,
+                linhas_relevantes=linhas_relevantes
             )
 
             prompt = criar_prompt_analise(

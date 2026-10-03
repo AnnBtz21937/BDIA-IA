@@ -34,21 +34,26 @@ O MongoDB é utilizado quando forem cadastradas fontes desse tipo.
 
 Antes de iniciar, instale:
 
-- Python 3.12 ou superior
-- Ollama
-- MySQL
-- MongoDB, caso utilize fontes MongoDB
+* Python 3.12 ou superior
+* Ollama
+* MySQL
+* MongoDB, caso utilize fontes MongoDB
 
 ### 1. Clonar o projeto
 
 ```bash
 git clone https://github.com/AnnBtz21937/Data-Lens-IA.git
+
 cd Data-Lens-IA
 ```
 
 ### 2. Criar o ambiente virtual
 
+O ambiente virtual deve ser criado dentro da pasta `backend`:
+
 ```bash
+cd backend
+
 python -m venv .venv
 ```
 
@@ -72,11 +77,16 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
+> **Importante:** mantenha o ambiente virtual ativado enquanto estiver executando o backend.
+
 ### 4. Instalar as dependências
+
+Ainda dentro da pasta `backend` e com o ambiente virtual ativado:
 
 ```bash
 python -m pip install --upgrade pip
-python -m pip install -r backend/requirements.txt
+
+python -m pip install -r requirements.txt
 ```
 
 ### 5. Configurar o banco de dados
@@ -97,11 +107,21 @@ DB_PASSWORD=sua_senha
 
 O projeto utiliza o **Llama 3.2 1B**, executado localmente através do Ollama.
 
+Baixe o modelo com:
+
 ```bash
 ollama pull llama3.2:1b
 ```
 
-Certifique-se de que o Ollama esteja em execução antes de utilizar as funcionalidades de IA.
+Para verificar se o modelo está instalado:
+
+```bash
+ollama list
+```
+
+O Ollama precisa estar em execução para que o backend consiga utilizar as funcionalidades de IA.
+
+> **Não é necessário manter `ollama run llama3.2:1b` aberto em um terminal separado durante o uso normal do sistema.** O importante é que o serviço do Ollama esteja em execução e que o modelo esteja instalado.
 
 ---
 
@@ -109,12 +129,25 @@ Certifique-se de que o Ollama esteja em execução antes de utilizar as funciona
 
 ### Backend
 
-Abra um terminal na raiz do projeto e execute:
+Abra um terminal na raiz do projeto e entre na pasta `backend`:
 
-```bash
+```cmd
 cd backend
+```
+
+Ative o ambiente virtual:
+
+```cmd
+.venv\Scripts\activate
+```
+
+Com o ambiente virtual ativado, execute o backend:
+
+```cmd
 python -m uvicorn app.main:app --reload --port 8000
 ```
+
+> **Importante:** mantenha este terminal aberto enquanto estiver utilizando o sistema.
 
 A API estará disponível em:
 
@@ -142,12 +175,16 @@ http://localhost:8000/docs
 
 ### Front-end
 
-Abra **outro terminal**, mantendo o backend em execução:
+Abra **outro terminal**, mantendo o backend em execução.
 
-```bash
+A partir da raiz do projeto, execute:
+
+```cmd
 cd front-end
 python -m http.server 5500
 ```
+
+> **Importante:** mantenha este segundo terminal aberto enquanto estiver utilizando o sistema.
 
 Depois, acesse:
 
@@ -157,7 +194,31 @@ http://localhost:5500
 
 O front-end utiliza o arquivo `front-end/config.js` para localizar a API do backend.
 
+### Resumo da execução
+
+Para utilizar o BDIA localmente, mantenha:
+
+* **Backend:** ambiente virtual ativado e Uvicorn em execução na porta `8000`;
+* **Ollama:** serviço em execução e modelo `llama3.2:1b` instalado;
+* **Front-end:** servidor HTTP em execução na porta `5500`.
+
+A estrutura de execução é:
+
+```text
+BDIA
+├── Backend
+│   ├── .venv
+│   └── Uvicorn → http://localhost:8000
+│
+├── Ollama
+│   └── Llama 3.2 1B
+│
+└── Front-end
+    └── HTTP Server → http://localhost:5500
+```
+
 ---
+
 
 ## Visão geral
 
@@ -297,7 +358,14 @@ A análise estrutural dos dados pode ser realizada pelo backend independentement
 | `GET` | `/mysql/tables` | lista as tabelas disponíveis no MySQL |
 | `GET` | `/mysql/tables/{table_name}` | consulta uma tabela MySQL |
 | `POST` | `/mysql/ask` | responde uma pergunta sobre uma tabela MySQL |
+| `GET` | `/mongodb/collections` | lista as coleções do MongoDB |
+| `GET` | `/mongodb/collections/{collection_name}` | lista campos e documentos de uma coleção |
+| `POST` | `/mongodb/ask` | responde uma pergunta usando documentos da coleção |
 | `GET` | `/health` | verifica se a API está funcionando |
+
+As rotas MySQL e MongoDB são somente de leitura: `GET` lista/consulta dados e `POST` processa perguntas. Não há `PUT` ou `DELETE`, pois essas APIs não alteram os bancos externos. Todas exigem token JWT.
+
+Para habilitar os endpoints MongoDB, configure `MONGODB_URL` no `backend/.env`, incluindo o banco na URL, por exemplo `mongodb://localhost:27017/meu_banco`. Opcionalmente, use `MONGODB_DATABASE` para informar o banco separadamente. O resumo retorna até 1.000 documentos; a IA considera até 50 documentos por pergunta.
 
 ## Diagnóstico rápido
 

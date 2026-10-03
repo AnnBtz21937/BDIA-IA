@@ -55,10 +55,10 @@ def delete_project(
     if not project:
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
 
-    db.query(Source).filter(Source.project_id == project_id).delete(
+    db.query(Question).filter(Question.project_id == project_id).delete(
         synchronize_session=False
     )
-    db.query(Question).filter(Question.project_id == project_id).delete(
+    db.query(Source).filter(Source.project_id == project_id).delete(
         synchronize_session=False
     )
     db.delete(project)

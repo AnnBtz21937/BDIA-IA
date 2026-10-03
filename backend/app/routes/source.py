@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 import os
 import shutil
 import json
+import re
 import urllib.parse
+import uuid
 
 from app.database import get_db
 from app.models.source import Source
@@ -23,11 +25,43 @@ def _is_database_source(source: Source) -> bool:
     return bool(source.path and source.path.startswith("database:"))
 
 
+def _normalize_mysql_query(query: str) -> str:
+    query = query.strip()
+    identifier = r"[A-Za-z_][A-Za-z0-9_$]*"
+
+    if re.fullmatch(rf"{identifier}(?:\.{identifier})*", query):
+        table_name = ".".join(f"`{part}`" for part in query.split("."))
+        return f"SELECT * FROM {table_name}"
+
+    statement = query[:-1].rstrip() if query.endswith(";") else query
+    if ";" in statement:
+        raise ValueError("Informe apenas uma consulta por vez.")
+    if not re.match(r"(?is)^SELECT\b", statement):
+        raise ValueError(
+            "Informe o nome da tabela ou uma consulta iniciada por SELECT."
+        )
+
+    return statement
+
+
+def _normalize_mysql_url(connection_url: str):
+    from sqlalchemy.engine import make_url
+
+    url = make_url(connection_url)
+    if url.drivername in {"mysql", "mysql+mysqldb"}:
+        return url.set(drivername="mysql+pymysql")
+    return url
+
+
 def _database_rows(source_type: str, connection_url: str, query: str):
     if source_type == "mysql":
         from sqlalchemy import create_engine, text
 
-        engine = create_engine(connection_url, pool_pre_ping=True)
+        query = _normalize_mysql_query(query)
+        engine = create_engine(
+            _normalize_mysql_url(connection_url),
+            pool_pre_ping=True
+        )
         with engine.connect() as connection:
             result = connection.execute(text(query))
             return [dict(row._mapping) for row in result]
@@ -126,9 +160,10 @@ def upload_source(
     os.makedirs(upload_directory, exist_ok=True)
 
     safe_filename = os.path.basename(file.filename)
+    stored_filename = f"{uuid.uuid4().hex}{file_extension}"
     file_path = os.path.join(
         upload_directory,
-        safe_filename
+        stored_filename
     )
 
     with open(file_path, "wb") as buffer:
@@ -173,15 +208,27 @@ def create_database_source(
     if not rows:
         raise HTTPException(status_code=400, detail="A consulta não retornou registros.")
 
-    stored_config = json.dumps({
-        "connection_url": connection_url,
-        "query": query,
-        "rows": rows
-    })
+    upload_directory = "uploads"
+    os.makedirs(upload_directory, exist_ok=True)
+    snapshot_path = os.path.join(
+        upload_directory,
+        f"{uuid.uuid4().hex}.csv"
+    )
+
+    try:
+        import pandas as pd
+
+        pd.DataFrame(rows).to_csv(snapshot_path, index=False)
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Não foi possível salvar os dados consultados: {error}"
+        ) from error
+
     new_source = Source(
         name=name,
         type=source_type,
-        path=f"database:{stored_config}",
+        path=snapshot_path,
         project_id=project_id
     )
     db.add(new_source)

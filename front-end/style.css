@@ -964,6 +964,8 @@ a {
     flex-direction: column;
 
     gap: 10px;
+    max-height: 360px;
+    overflow-y: auto;
 }
 
 .source-card {
@@ -1105,6 +1107,79 @@ a {
     color: #aaa9b3;
 }
 
+.source-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+}
+
+.source-analyze,
+.source-menu {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.source-analyze:hover,
+.source-menu:hover {
+    background: var(--surface);
+    color: var(--primary);
+}
+
+.source-analyze:disabled {
+    cursor: wait;
+    opacity: .6;
+}
+
+.analysis-modal {
+    max-width: 900px;
+    max-height: 85vh;
+    overflow: auto;
+}
+
+.analysis-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.analysis-table {
+    width: 100%;
+    min-width: 680px;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.analysis-table th,
+.analysis-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+}
+
+.analysis-table thead th {
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.analysis-table tbody th {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.analysis-table tbody tr:last-child th,
+.analysis-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
 
 /* EMPTY */
 
@@ -1176,11 +1251,13 @@ a {
 
     flex-direction: column;
 
+    height: 540px;
     min-height: 540px;
 }
 
 .chat-header {
     height: 70px;
+    flex: 0 0 70px;
 
     padding: 0 20px;
 
@@ -1254,13 +1331,14 @@ a {
 /* MESSAGES */
 
 .chat-messages {
-    flex: 1;
+    flex: 1 1 auto;
 
     padding: 22px;
 
     overflow-y: auto;
 
-    min-height: 340px;
+    min-height: 0;
+    overscroll-behavior: contain;
 }
 
 .message {
@@ -1396,6 +1474,7 @@ a {
 /* CHAT INPUT */
 
 .chat-input-area {
+    flex: 0 0 auto;
     padding: 15px 18px;
 
     border-top: 1px solid var(--border);
@@ -1544,7 +1623,6 @@ a {
 
     max-width: 900px;
 }
-
 
 /* =========================
    MODAL
